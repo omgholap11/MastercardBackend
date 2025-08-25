@@ -63,16 +63,69 @@ export const createRequest = async (req, res) => {
     }
 };
 
+// Helper function to check if a request is fulfilled (all items have 0 count)
+const isRequestFulfilled = (request) => {
+    const categories = ['clothes', 'stationary', 'foods', 'furniture', 'electronics'];
+    
+    for (const category of categories) {
+        const categoryData = request[category] || {};
+        // Check if any item in this category has count > 0
+        for (const itemName in categoryData) {
+            if (categoryData[itemName].count > 0) {
+                return false; // Found an item that still needs donations
+            }
+        }
+    }
+    return true; // All items have count 0 or no items exist
+};
+
+// Helper function to check if a request has any requirements (not empty)
+const hasRequirements = (request) => {
+    const categories = ['clothes', 'stationary', 'foods', 'furniture', 'electronics'];
+    
+    for (const category of categories) {
+        const categoryData = request[category] || {};
+        // Check if this category has any items
+        if (Object.keys(categoryData).length > 0) {
+            return true; // Found at least one item in any category
+        }
+    }
+    return false; // No items in any category
+};
+
 // Get all requests
 export const getAllRequests = async (req, res) => {
     try {
-        const requests = await Request.find()
-            .populate('requestorId', 'name email')
+        const allRequests = await Request.find()
+            .populate('requestorId', 'name email number address type')
             .sort({ createdAt: -1 });
 
+        // Filter out fulfilled requests and requests with no requirements
+        const activeRequests = [];
+        
+        for (const request of allRequests) {
+            // Skip if request has no requirements (empty request)
+            if (!hasRequirements(request)) {
+                continue;
+            }
+            
+            // Check if request is fulfilled and update status if needed
+            if (isRequestFulfilled(request) && request.status !== 'fulfilled') {
+                await Request.findByIdAndUpdate(request._id, { status: 'fulfilled' });
+                continue; // Don't include fulfilled requests in response
+            }
+            
+            // Skip if already marked as fulfilled
+            if (request.status === 'fulfilled') {
+                continue;
+            }
+            
+            activeRequests.push(request);
+        }
+
         res.status(200).json({
-            message: "Requests retrieved successfully",
-            requests
+            message: "Active requests retrieved successfully",
+            requests: activeRequests
         });
     } catch (error) {
         console.error("Error fetching requests:", error);
@@ -88,7 +141,7 @@ export const getRequestById = async (req, res) => {
         const { id } = req.params;
         
         const request = await Request.findById(id)
-            .populate('requestorId', 'name email phone address');
+            .populate('requestorId', 'name email number address type');
 
         if (!request) {
             return res.status(404).json({ error: "Request not found" });

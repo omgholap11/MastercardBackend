@@ -13,7 +13,30 @@ import {checkForAuthenticationCookieDonor} from "../Middlewares/authentication.j
 const donationRouter = express.Router();
 
 // Create a new donation with image uploads
-donationRouter.post("/create", checkForAuthenticationCookieDonor("token") , uploadCategoryImages, createDonation);
+donationRouter.post("/create", checkForAuthenticationCookieDonor("token"), (req, res, next) => {
+    console.log("Before multer middleware");
+    uploadCategoryImages(req, res, (err) => {
+        if (err) {
+            console.error("Multer error:", err);
+            return res.status(400).json({ error: "File upload error", details: err.message });
+        }
+        console.log("Multer middleware completed successfully");
+        next();
+    });
+}, createDonation);
+
+// Test endpoint without auth for debugging
+donationRouter.post("/test", (req, res, next) => {
+    console.log("Test endpoint - Before multer");
+    uploadCategoryImages(req, res, (err) => {
+        if (err) {
+            console.error("Test multer error:", err);
+            return res.status(400).json({ error: "File upload error", details: err.message });
+        }
+        console.log("Test multer completed");
+        res.json({ message: "Test successful", body: req.body, files: req.files });
+    });
+});
 
 // Get all donations
 donationRouter.get("/", checkForAuthenticationCookieDonor("token") ,getAllDonations);

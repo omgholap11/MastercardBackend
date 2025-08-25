@@ -4,14 +4,20 @@ import Request from "../Model/request.js";
 // Create a donation (donor donates to a specific request)
 export const createDonation = async (req, res) => {
     try {
-        console.log("Donation request body:", req.body);
-        console.log("Uploaded files:", req.files);
+        console.log("=== DONATION CREATE REQUEST START ===");
+        console.log("Request body:", req.body);
+        console.log("Request files:", req.files);
+        console.log("User from auth middleware:", req.user);
+        console.log("========================================");
 
         const donorId = req.user.userId; // Get from auth middleware
         const {  
+            requestId,
             description, 
             donationData,
         } = req.body;
+        
+        console.log("Parsed requestId:", donationData, requestId, description, donorId);
 
         if (!donorId || !requestId) {
             return res.status(400).json({ error: "Donor ID and Request ID are required" });
@@ -48,8 +54,21 @@ export const createDonation = async (req, res) => {
         const processCategoryData = (categoryName, categoryData, images = []) => {
             if (categoryData && typeof categoryData === 'object') {
                 Object.keys(categoryData).forEach(itemName => {
-                    const itemData = categoryData[itemName];
-                    const donatingCount = parseInt(itemData.count) || 0;
+                    const itemValue = categoryData[itemName];
+                    
+                    // Handle two possible formats:
+                    // 1. Frontend format: {"sweater": 1, "jacket": 2}
+                    // 2. Backend format: {"sweater": {"count": 1}, "jacket": {"count": 2}}
+                    let donatingCount;
+                    if (typeof itemValue === 'number') {
+                        // Frontend format: direct number value
+                        donatingCount = parseInt(itemValue) || 0;
+                    } else if (typeof itemValue === 'object' && itemValue.count) {
+                        // Backend format: object with count property
+                        donatingCount = parseInt(itemValue.count) || 0;
+                    } else {
+                        donatingCount = 0;
+                    }
                     
                     if (donatingCount > 0) {
                         organizedDonationData[categoryName][itemName] = {
@@ -151,10 +170,7 @@ export const createDonation = async (req, res) => {
             foods: organizedDonationData.foods,
             furniture: organizedDonationData.furniture,
             electronics: organizedDonationData.electronics,
-            totalItemsCount,
-            pickupAddress,
-            contactPhone,
-            deliveryAddress: request.requestorId // You might want to populate this from user data
+            totalItemsCount
         });
 
         // Save donation
