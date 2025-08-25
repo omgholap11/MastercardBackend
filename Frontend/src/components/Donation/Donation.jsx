@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import axios from "axios";
 import DonationCard from "./DonationCard";
 import DonationForm from "./DonationForm";
 
@@ -172,13 +173,109 @@ function Donation() {
   const [sortBy, setSortBy] = useState("urgency");
   const [selectedRequirement, setSelectedRequirement] = useState(null);
   const [isDonationFormOpen, setIsDonationFormOpen] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Transform backend request data to match frontend format
+  const transformRequestData = (backendRequest) => {
+    // Get all items from all categories
+    const allItems = [];
+    const categories = ['clothes', 'stationary', 'foods', 'furniture', 'electronics'];
+    
+    categories.forEach(category => {
+      if (backendRequest[category] && typeof backendRequest[category] === 'object') {
+        Object.keys(backendRequest[category]).forEach(itemName => {
+          allItems.push(itemName);
+        });
+      }
+    });
+
+    // Determine primary category (category with most items)
+    let primaryCategory = 'stationary'; // default
+    let maxItems = 0;
+    categories.forEach(category => {
+      const itemCount = backendRequest[category] ? Object.keys(backendRequest[category]).length : 0;
+      if (itemCount > maxItems) {
+        maxItems = itemCount;
+        primaryCategory = category === 'foods' ? 'food' : 
+                         category === 'electronics' ? 'electronic' : category;
+      }
+    });
+
+    // Calculate total target quantity
+    let totalTargetQuantity = 0;
+    categories.forEach(category => {
+      if (backendRequest[category] && typeof backendRequest[category] === 'object') {
+        Object.values(backendRequest[category]).forEach(item => {
+          totalTargetQuantity += item.count || 0;
+        });
+      }
+    });
+
+    // Hardcoded values for fields not in backend
+    const urgencyOptions = ['urgent', 'high', 'medium'];
+    const randomUrgency = urgencyOptions[Math.floor(Math.random() * urgencyOptions.length)];
+    const randomReceivedQuantity = Math.floor(totalTargetQuantity * Math.random() * 0.8); // 0-80% received
+
+    return {
+      id: backendRequest._id,
+      title: backendRequest.description || "Community Support Request",
+      organization: backendRequest.requestorId?.name || "Community Organization",
+      category: primaryCategory,
+      description: backendRequest.description || "Help support our community needs",
+      itemsNeeded: allItems,
+      urgency: randomUrgency, // Hardcoded since not in backend
+      location: "India", // Hardcoded since not in backend
+      targetQuantity: totalTargetQuantity,
+      receivedQuantity: randomReceivedQuantity, // Hardcoded calculation
+      unit: "items",
+      image: "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=400&h=250&fit=crop", // Hardcoded
+      createdAt: backendRequest.createdAt,
+      status: backendRequest.status
+    };
+  };
+
+  // Fetch requests from backend
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await axios.get('http://localhost:5001/request/', {
+        withCredentials: true, // Include cookies for authentication
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.data && response.data.requests) {
+        const transformedRequests = response.data.requests.map(transformRequestData);
+        setRequests(transformedRequests);
+      } else {
+        setRequests([]);
+      }
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+      setError('Failed to load donation requests. Please try again later.');
+      // Fallback to dummy data if API fails
+      setRequests(dummyRequirements);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch requests on component mount
+  useEffect(() => {
+    fetchRequests();
+  }, []);
 
   // Filter requirements based on selected categories
   const filteredRequirements = useMemo(() => {
-    let filtered = dummyRequirements;
+    let filtered = requests;
 
     if (!selectedCategories.includes("all")) {
-      filtered = dummyRequirements.filter((req) =>
+      filtered = requests.filter((req) =>
         selectedCategories.includes(req.category)
       );
     }
@@ -195,7 +292,7 @@ function Donation() {
       }
       return 0;
     });
-  }, [selectedCategories, sortBy]);
+  }, [requests, selectedCategories, sortBy]);
 
   const handleCategoryChange = (categoryId) => {
     if (categoryId === "all") {
@@ -231,16 +328,79 @@ function Donation() {
           <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-4">
             Support Those in Need
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-4">
             Choose from various categories and make a meaningful impact in
             someone's life
           </p>
+          <div className="flex justify-center items-center gap-4">
+            <div className="text-sm text-gray-500">
+              {requests.length > 0 ? `${requests.length} requests available` : 'Fetching requests...'}
+            </div>
+            <button
+              onClick={fetchRequests}
+              disabled={loading}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {loading ? 'Loading...' : '🔄 Refresh'}
+            </button>
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-accent p-6 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Category Filters */}
+        {/* Loading State */}
+        {loading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <span className="ml-3 text-gray-600">Loading donation requests...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+            <div className="flex items-center">
+              <div className="text-red-400">⚠️</div>
+              <div className="ml-3">
+                <p className="text-red-700 font-medium">Error loading requests</p>
+                <p className="text-red-600 text-sm">{error}</p>
+                <button 
+                  onClick={fetchRequests}
+                  className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show content only when not loading */}
+        {!loading && (
+          <>
+            {/* Instructions for testing */}
+            {requests.length === 0 && !error && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                    No donation requests available yet
+                  </h3>
+                  <p className="text-blue-600 mb-4">
+                    To see donation requests here, first log in as a receiver and create some requests, 
+                    or use the dummy data as fallback.
+                  </p>
+                  <button
+                    onClick={() => setRequests(dummyRequirements)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Load Demo Data
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Filters */}
+            <div className="bg-white rounded-lg shadow-sm border border-accent p-6 mb-8">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                {/* Category Filters */}
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-secondary mb-4">
                 Filter by Category
@@ -331,6 +491,8 @@ function Donation() {
             isOpen={isDonationFormOpen}
             onClose={handleCloseDonationForm}
           />
+        )}
+          </>
         )}
       </div>
     </div>

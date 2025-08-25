@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 
 const Recipient = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,11 @@ const Recipient = () => {
     furniture: {},
     electronics: {},
   });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitResponse, setSubmitResponse] = useState(null);
 
   const categories = ["clothes", "stationary", "foods", "furniture", "electronics"];
 
@@ -57,9 +63,76 @@ const Recipient = () => {
     });
   };
 
-  const handleSubmit = () => {
-    console.log("Form Submitted:", formData);
-    // here you can send formData to backend using axios/fetch
+  const handleSubmit = async () => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    setSubmitResponse(null);
+
+    // Validate that at least one category has items
+    const hasItems = Object.values(formData).some((category, index) => {
+      if (index === 0) return false; // Skip description field
+      return category && Object.keys(category).length > 0;
+    });
+
+    if (!hasItems) {
+      setError("Please add at least one item to your request.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log("Submitting request data:", formData);
+
+      const response = await axios.post(
+        "http://localhost:5001/request/create",
+        {
+          description: formData.description,
+          clothes: formData.clothes,
+          stationary: formData.stationary,
+          foods: formData.foods,
+          furniture: formData.furniture,
+          electronics: formData.electronics,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true, // For authentication cookies
+        }
+      );
+
+      console.log("Request submitted successfully:", response.data);
+      setSuccess("Your request has been submitted successfully!");
+      setSubmitResponse(response.data);
+
+      // Reset form after successful submission
+      setFormData({
+        description: "",
+        clothes: {},
+        stationary: {},
+        foods: {},
+        furniture: {},
+        electronics: {},
+      });
+
+    } catch (error) {
+      console.error("Error submitting request:", error);
+      
+      if (error.response) {
+        // Server responded with an error status
+        const errorMessage = error.response.data?.error || error.response.data?.message || "Server error occurred";
+        setError(`Failed to submit request: ${errorMessage}`);
+      } else if (error.request) {
+        // Request was made but no response received
+        setError("Network error: Unable to connect to server. Please check if the backend is running.");
+      } else {
+        // Something else happened
+        setError("An unexpected error occurred while submitting your request.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,6 +141,31 @@ const Recipient = () => {
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           Recipient Request Form
         </h1>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+            <div className="flex items-center">
+              <span className="text-red-500 mr-2">⚠️</span>
+              {error}
+            </div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {success && (
+          <div className="mb-6 p-4 bg-green-100 border border-green-300 text-green-700 rounded-lg">
+            <div className="flex items-center">
+              <span className="text-green-500 mr-2">✅</span>
+              {success}
+            </div>
+            {submitResponse && (
+              <div className="mt-2 text-sm">
+                <strong>Request ID:</strong> {submitResponse.request?._id}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Description */}
@@ -166,14 +264,56 @@ const Recipient = () => {
             </div>
           ))}
 
+          {/* Request Summary */}
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <h3 className="text-lg font-semibold text-blue-800 mb-3">Request Summary</h3>
+            {Object.entries(formData).map(([category, items]) => {
+              if (category === 'description' || !items || Object.keys(items).length === 0) return null;
+              
+              const totalItems = Object.values(items).reduce((sum, item) => sum + (item.count || 0), 0);
+              
+              return (
+                <div key={category} className="mb-2">
+                  <span className="font-medium text-blue-700 capitalize">{category}:</span>
+                  <span className="ml-2 text-blue-600">
+                    {Object.entries(items).map(([itemName, itemData]) => 
+                      `${itemName} (${itemData.count})`
+                    ).join(', ')}
+                  </span>
+                  <span className="ml-2 text-sm text-blue-500">
+                    Total: {totalItems} items
+                  </span>
+                </div>
+              );
+            })}
+            
+            {Object.values(formData).every((category, index) => 
+              index === 0 || !category || Object.keys(category).length === 0
+            ) && (
+              <p className="text-blue-600 italic">No items added yet. Please add items to see summary.</p>
+            )}
+          </div>
+
           {/* Submit Button */}
           <div className="text-center">
             <button
               type="button"
               onClick={handleSubmit}
-              className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold shadow-md hover:bg-orange-600 transition-all"
+              disabled={loading}
+              className={`px-8 py-3 rounded-lg font-semibold shadow-md transition-all ${
+                loading
+                  ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                  : "bg-orange-500 text-white hover:bg-orange-600"
+              }`}
             >
-              Submit Request
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Submitting Request...
+                </div>
+              ) : (
+                "Submit Request"
+              )}
             </button>
           </div>
         </div>

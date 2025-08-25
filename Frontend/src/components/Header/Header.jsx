@@ -1,19 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Bell, User, LogOut } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
 import Logo from "../../assets/book-donation.png";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [role, setRole] = useState(null);
+  const [userid, setUserid] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading, logout } = useAuth();
 
+  const fetchUserRole = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:5001/token/details", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        console.error("Token fetch failed:", response.statusText);
+        return { role: null, userId: null };
+      }
+
+      const data = await response.json();
+      console.log("Token response:", data);
+      return { role: data.role, userId: data.userId };
+
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      return { role: null, userId: null };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const { role, userId } = await fetchUserRole();
+      console.log("User role:", role, "User ID:", userId);
+      setRole(role);
+      setUserid(userId);
+    };
+    checkUserRole();
+  }, []);
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result.success) {
-      navigate("/");
+    try {
+      const userType = role === 'donor' ? 'donor' : 'receiver';
+      const response = await fetch(`http://localhost:5001/${userType}/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        setRole(null);
+        setUserid(null);
+        navigate("/");
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
 
@@ -80,7 +129,7 @@ function Header() {
           <div className="flex items-center gap-4">
             {loading ? (
               <div className="w-8 h-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-            ) : isAuthenticated ? (
+            ) : role ? (
               <>
                 {/* Notifications Bell - Only for authenticated users */}
                 <button className="hidden sm:block p-2 text-secondary hover:text-primary transition-colors duration-200">
@@ -89,8 +138,8 @@ function Header() {
 
                 {/* User Profile with Role Badge */}
                 <div className="hidden sm:flex items-center gap-3">
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(user?.role)}`}>
-                    {getRoleDisplay(user?.role)}
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(role)}`}>
+                    {getRoleDisplay(role)}
                   </div>
                   <button className="p-2 text-secondary hover:text-primary transition-colors duration-200">
                     <User className="w-6 h-6" />
@@ -174,11 +223,11 @@ function Header() {
 
               {/* Mobile-only actions */}
               <div className="pt-3 mt-3 border-t border-accent">
-                {isAuthenticated ? (
+                {role ? (
                   <>
                     <div className="flex items-center justify-between mb-3">
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(user?.role)}`}>
-                        {getRoleDisplay(user?.role)}
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(role)}`}>
+                        {getRoleDisplay(role)}
                       </div>
                     </div>
                     <div className="flex gap-4">

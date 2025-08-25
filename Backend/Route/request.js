@@ -9,24 +9,26 @@ import {
 } from "../Controllers/request.js";
 // Removed multer import since requests don't need images
 
+import { checkForAuthenticationCookieForReceiver } from "../Middlewares/authentication.js";
+
 const requestRouter = express.Router();
 
 // Create a new request (no image upload needed)
-requestRouter.post("/create", createRequest);
+requestRouter.post("/create", checkForAuthenticationCookieForReceiver("token"), createRequest);
 
 
-requestRouter.get("/", getAllRequests);
+requestRouter.get("/", checkForAuthenticationCookieForReceiver("token"), getAllRequests);
 
 // Get request by ID
-requestRouter.get("/:id", getRequestById);
+requestRouter.get("/:id", checkForAuthenticationCookieForReceiver("token"), getRequestById);
 
 // Get requests by requestor ID
-requestRouter.get("/requestor/:requestorId", getRequestsByRequestorId);
+requestRouter.get("/requestor/:requestorId", checkForAuthenticationCookieForReceiver("token"), getRequestsByRequestorId);
 
 // Update request status
-requestRouter.patch("/:id/status", updateRequestStatus);
+requestRouter.patch("/:id/status", checkForAuthenticationCookieForReceiver("token"), updateRequestStatus);
 
 // Delete request
-requestRouter.delete("/:id", deleteRequest);
+requestRouter.delete("/:id", checkForAuthenticationCookieForReceiver("token"), deleteRequest);
 
 export default requestRouter;

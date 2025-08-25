@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Mail, Lock, User, Phone, MapPin, Heart, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Phone, MapPin, Heart, ArrowLeft, Building2 } from 'lucide-react';
 
 const DonorSignUp = () => {
   const navigate = useNavigate();
@@ -11,9 +11,10 @@ const DonorSignUp = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    number: '',
     address: '',
-    password: ''
+    password: '',
+    type: 'individual'
   });
 
   const handleInputChange = (e) => {
@@ -130,13 +131,33 @@ const DonorSignUp = () => {
               </label>
               <input
                 type="tel"
-                name="phone"
-                value={formData.phone}
+                name="number"
+                value={formData.number}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
                 placeholder="Enter your phone number"
                 required
               />
+            </div>
+
+            {/* Donor Type Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Building2 className="w-4 h-4 inline mr-2" />
+                Donor Type
+              </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                required
+              >
+                <option value="individual">Individual</option>
+                <option value="ngo">NGO</option>
+                <option value="corporate">Corporate</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Choose the type that best describes you</p>
             </div>
 
             {/* Address Field */}

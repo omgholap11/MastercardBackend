@@ -1,12 +1,13 @@
 import Request from "../Model/request.js";
+import Receiver from "../Model/receiver.js"; // Import to register the model
 
 // Create a new request (simple, no images)
 export const createRequest = async (req, res) => {
     try {
         console.log("Request body:", req.body);
 
-        // const requestorId = req.user.userId;
-        const requestorId = 45;
+        const requestorId = req.user.userId;
+        console.log("Requestor ID from token:", requestorId);
         const { description, clothes, stationary, foods, furniture, electronics } = req.body;
 
         if (!requestorId) {
