@@ -20,6 +20,7 @@ const Layout = ({ children }) => {
     { name: 'History', href: '/history', icon: History },
     { name: 'Matched Donations', href: '/matched', icon: GitMerge },
     { name: 'All Requests', href: '/requests', icon: FileText },
+    { name: 'Debug Test', href: '/debug', icon: Settings },
   ];
 
   const isActive = (path) => location.pathname === path;

@@ -75,15 +75,21 @@ const Requests = () => {
   };
 
   const formatItems = (items) => {
+    if (!items || typeof items !== 'object') {
+      return 'No items';
+    }
+    
     const itemList = [];
     Object.entries(items).forEach(([category, categoryItems]) => {
-      Object.entries(categoryItems).forEach(([item, details]) => {
-        if (details.count > 0) {
-          itemList.push(`${details.count} ${item}`);
-        }
-      });
+      if (categoryItems && typeof categoryItems === 'object') {
+        Object.entries(categoryItems).forEach(([item, details]) => {
+          if (details && details.count > 0) {
+            itemList.push(`${details.count} ${item}`);
+          }
+        });
+      }
     });
-    return itemList.join(', ');
+    return itemList.length > 0 ? itemList.join(', ') : 'No items';
   };
 
   const getStatusIcon = (status) => {

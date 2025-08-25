@@ -26,11 +26,24 @@ const MatchedDonations = () => {
     try {
       setLoading(true);
       const response = await adminAPI.getMatchedDonations();
-      setDonations(response.data.data);
+      const data = response.data.data;
+      
+      // Ensure we have an array - handle different response structures
+      let donationsArray = [];
+      if (Array.isArray(data)) {
+        donationsArray = data;
+      } else if (data && Array.isArray(data.donations)) {
+        donationsArray = data.donations;
+      } else if (data && Array.isArray(data.matchedDonations)) {
+        donationsArray = data.matchedDonations;
+      }
+      
+      setDonations(donationsArray);
       setError(null);
     } catch (err) {
       setError('Failed to load matched donations');
       console.error('Matched donations error:', err);
+      setDonations([]); // Ensure it's always an array even on error
     } finally {
       setLoading(false);
     }
@@ -90,15 +103,21 @@ const MatchedDonations = () => {
   };
 
   const formatItems = (items) => {
+    if (!items || typeof items !== 'object') {
+      return 'No items';
+    }
+    
     const itemList = [];
     Object.entries(items).forEach(([category, categoryItems]) => {
-      Object.entries(categoryItems).forEach(([item, details]) => {
-        if (details.count > 0) {
-          itemList.push(`${details.count} ${item}`);
-        }
-      });
+      if (categoryItems && typeof categoryItems === 'object') {
+        Object.entries(categoryItems).forEach(([item, details]) => {
+          if (details && details.count > 0) {
+            itemList.push(`${details.count} ${item}`);
+          }
+        });
+      }
     });
-    return itemList.join(', ');
+    return itemList.length > 0 ? itemList.join(', ') : 'No items';
   };
 
   const getNextStatus = (currentStatus) => {
@@ -170,7 +189,7 @@ const MatchedDonations = () => {
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {['matched', 'pending_pickup', 'in_transit', 'delivered'].map(status => {
-          const count = donations.filter(d => d.status === status).length;
+          const count = Array.isArray(donations) ? donations.filter(d => d.status === status).length : 0;
           return (
             <div key={status} className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-5">
@@ -196,7 +215,7 @@ const MatchedDonations = () => {
       {/* Donations List */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
-          {donations.length === 0 ? (
+          {!Array.isArray(donations) || donations.length === 0 ? (
             <li className="px-6 py-4 text-center text-gray-500">
               No matched donations found
             </li>
@@ -284,7 +303,7 @@ const MatchedDonations = () => {
 
       {/* Results Summary */}
       <div className="mt-4 text-sm text-gray-600 text-center">
-        Total {donations.length} matched donations
+        Total {Array.isArray(donations) ? donations.length : 0} matched donations
       </div>
     </div>
   );

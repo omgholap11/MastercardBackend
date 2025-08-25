@@ -18,7 +18,43 @@ const History = () => {
     try {
       setLoading(true);
       const response = await adminAPI.getHistory();
-      setHistory(response.data.data);
+      const historyData = response.data.data;
+      
+      // Combine completed donations and fulfilled requests into a single array
+      const combinedHistory = [];
+      
+      // Add completed donations
+      if (historyData.completedDonations) {
+        historyData.completedDonations.forEach(donation => {
+          combinedHistory.push({
+            ...donation,
+            type: 'donation',
+            donorName: donation.donorId?.name || 'Unknown',
+            receiverName: donation.requestId?.requestorId?.name || 'Unknown',
+            receiverAddress: donation.requestId?.requestorId?.address || 'No address',
+            items: donation.items || {}
+          });
+        });
+      }
+      
+      // Add fulfilled requests
+      if (historyData.fulfilledRequests) {
+        historyData.fulfilledRequests.forEach(request => {
+          combinedHistory.push({
+            ...request,
+            type: 'request',
+            donorName: null,
+            receiverName: request.requestorId?.name || 'Unknown',
+            receiverAddress: request.requestorId?.address || 'No address',
+            items: request.items || {}
+          });
+        });
+      }
+      
+      // Sort by creation date (newest first)
+      combinedHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      setHistory(combinedHistory);
       setError(null);
     } catch (err) {
       setError('Failed to load history');
@@ -69,15 +105,21 @@ const History = () => {
   };
 
   const formatItems = (items) => {
+    if (!items || typeof items !== 'object') {
+      return 'No items';
+    }
+    
     const itemList = [];
     Object.entries(items).forEach(([category, categoryItems]) => {
-      Object.entries(categoryItems).forEach(([item, details]) => {
-        if (details.count > 0) {
-          itemList.push(`${details.count} ${item}`);
-        }
-      });
+      if (categoryItems && typeof categoryItems === 'object') {
+        Object.entries(categoryItems).forEach(([item, details]) => {
+          if (details && details.count > 0) {
+            itemList.push(`${details.count} ${item}`);
+          }
+        });
+      }
     });
-    return itemList.join(', ');
+    return itemList.length > 0 ? itemList.join(', ') : 'No items';
   };
 
   if (loading) {
