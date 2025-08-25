@@ -3,29 +3,58 @@ import ChatbotIcon from "./ChatbotIcon";
 import ChatForm from "./ChatForm";
 import ChatMessage from "./ChatMessage";
 import companyInfo from "./companyinfo";
+import { LanguageProvider, useLanguage } from "./LanguageContext";
+import translations from "./translations";
+import multilingualCompanyInfo from "./multilingualCompanyInfo";
 import "./Chatbot.css";
 
-const Chatbot = () => {
+const ChatbotContent = () => {
+  const { language, changeLanguage } = useLanguage();
+  const t = translations[language];
+
   const [chatHistory, setChatHistory] = useState([
     {
       hideInChat: true,
       role: "model",
-      text: companyInfo,
+      text: multilingualCompanyInfo[language],
     },
   ]);
 
   const [showChatbot, setShowChatbot] = useState(false);
   const chatBodyRef = useRef();
 
+  // Update chat history when language changes
+  useEffect(() => {
+    setChatHistory((prev) => [
+      {
+        hideInChat: true,
+        role: "model",
+        text: multilingualCompanyInfo[language],
+      },
+      ...prev.filter((msg) => !msg.hideInChat),
+    ]);
+  }, [language]);
+
   const generateBotResponse = async (history) => {
     const updateHistory = (text, isError = false) => {
       setChatHistory((prev) => [
-        ...prev.filter((msg) => msg.text !== "Thinking..."),
+        ...prev.filter((msg) => msg.text !== t.thinking),
         { role: "model", text, isError },
       ]);
     };
 
-    history = history.map(({ role, text }) => ({ role, parts: [{ text }] }));
+    // Add system prompt in the selected language to ensure responses are in the correct language
+    const systemPrompt = {
+      role: "model",
+      parts: [
+        { text: t.systemPrompt + "\n\n" + multilingualCompanyInfo[language] },
+      ],
+    };
+
+    history = [
+      systemPrompt,
+      ...history.map(({ role, text }) => ({ role, parts: [{ text }] })),
+    ];
 
     const requestOptions = {
       method: "POST",
@@ -85,7 +114,7 @@ const Chatbot = () => {
                 fill="currentColor"
               />
             </svg>
-            <span>Need Help?</span>
+            <span>{t.needHelp}</span>
           </>
         ) : (
           <>
@@ -104,7 +133,7 @@ const Chatbot = () => {
                 strokeLinejoin="round"
               />
             </svg>
-            <span>Close</span>
+            <span>{t.close}</span>
           </>
         )}
       </button>
@@ -114,42 +143,64 @@ const Chatbot = () => {
         <div className="chat-header">
           <div className="header-info">
             <ChatbotIcon />
-            <h2 className="logo-text">Seva Sahayog Assistant</h2>
+            <h2 className="logo-text">{t.chatbotName}</h2>
           </div>
-          <button
-            onClick={() => setShowChatbot((prev) => !prev)}
-            className="close-btn"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+          <div className="header-controls">
+            {/* Language Selector */}
+            <div className="language-selector">
+              <select
+                value={language}
+                onChange={(e) => changeLanguage(e.target.value)}
+                className="language-dropdown"
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  color: "white",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  marginRight: "8px",
+                }}
+              >
+                <option value="english" style={{ color: "black" }}>
+                  English
+                </option>
+                <option value="hindi" style={{ color: "black" }}>
+                  हिंदी
+                </option>
+                <option value="marathi" style={{ color: "black" }}>
+                  मराठी
+                </option>
+              </select>
+            </div>
+            <button
+              onClick={() => setShowChatbot((prev) => !prev)}
+              className="close-btn"
             >
-              <path
-                d="M18 15L12 9L6 15"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18 15L12 9L6 15"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/*Chat bot body*/}
         <div ref={chatBodyRef} className="chat-body">
           <div className="message bot-message">
             <ChatbotIcon />
-            <p className="message-text">
-              Hey there! I'm your friendly Seva Sahayog assistant! 👋
-              <br />
-              I'm here to help you with donations, requirements, and connecting
-              with organizations in need.
-              <br />
-              How can I help you today?
-            </p>
+            <p className="message-text">{t.welcomeMessage}</p>
           </div>
 
           {/*Render the chat history dynamically*/}
@@ -164,10 +215,19 @@ const Chatbot = () => {
             chatHistory={chatHistory}
             setChatHistory={setChatHistory}
             generateBotResponse={generateBotResponse}
+            translations={t}
           />
         </div>
       </div>
     </div>
+  );
+};
+
+const Chatbot = () => {
+  return (
+    <LanguageProvider>
+      <ChatbotContent />
+    </LanguageProvider>
   );
 };
 

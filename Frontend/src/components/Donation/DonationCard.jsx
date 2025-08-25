@@ -76,8 +76,37 @@ function DonationCard({ requirement, onOpenDonationForm }) {
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h6m-6 4h6m-2 4h2"
               />
             </svg>
-            {requirement.organization}
+            <div className="flex flex-col">
+              <span className="font-medium text-gray-800">{requirement.organization}</span>
+              {requirement.organizationType && (
+                <span className="text-xs text-gray-500">
+                  {requirement.organizationType}
+                </span>
+              )}
+            </div>
           </div>
+          
+          {/* Contact Information */}
+          {(requirement.contactEmail || requirement.contactNumber) && (
+            <div className="text-xs text-gray-600 mb-2 space-y-1">
+              {requirement.contactEmail && (
+                <div className="flex items-center">
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <span className="truncate">{requirement.contactEmail}</span>
+                </div>
+              )}
+              {requirement.contactNumber && (
+                <div className="flex items-center">
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <span>{requirement.contactNumber}</span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex items-center text-sm text-gray-600">
             <svg
               className="w-4 h-4 mr-1"

@@ -154,7 +154,7 @@ const DonorSignUp = () => {
                 required
               >
                 <option value="individual">Individual</option>
-                <option value="ngo">NGO</option>
+                {/* <option value="ngo">NGO</option> */}
                 <option value="corporate">Corporate</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">Choose the type that best describes you</p>

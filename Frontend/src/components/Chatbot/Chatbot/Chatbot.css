@@ -80,6 +80,38 @@
   gap: 12px;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.language-dropdown {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  outline: none;
+  cursor: pointer;
+}
+
+.language-dropdown:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.language-dropdown option {
+  color: black !important;
+  background: white !important;
+}
+
 .logo-text {
   font-size: 16px;
   font-weight: 600;

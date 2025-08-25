@@ -218,21 +218,45 @@ function Donation() {
     const randomUrgency = urgencyOptions[Math.floor(Math.random() * urgencyOptions.length)];
     const randomReceivedQuantity = Math.floor(totalTargetQuantity * Math.random() * 0.8); // 0-80% received
 
+    // Get receiver info from populated data
+    const receiver = backendRequest.requestorId;
+    const organizationType = receiver?.type ? 
+      (receiver.type === 'ngo' ? 'NGO' : 
+       receiver.type === 'school' ? 'School' : 'Organization') : 'Organization';
+    
     return {
       id: backendRequest._id,
-      title: backendRequest.description || "Community Support Request",
-      organization: backendRequest.requestorId?.name || "Community Organization",
+      title: backendRequest.description || `${organizationType} Support Request`,
+      organization: receiver?.name || "Community Organization",
+      organizationType: organizationType,
+      contactEmail: receiver?.email || "",
+      contactNumber: receiver?.number || "",
       category: primaryCategory,
       description: backendRequest.description || "Help support our community needs",
       itemsNeeded: allItems,
       urgency: randomUrgency, // Hardcoded since not in backend
-      location: "India", // Hardcoded since not in backend
+      location: receiver?.address || "India", // Use receiver address or fallback
       targetQuantity: totalTargetQuantity,
       receivedQuantity: randomReceivedQuantity, // Hardcoded calculation
       unit: "items",
       image: "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=400&h=250&fit=crop", // Hardcoded
       createdAt: backendRequest.createdAt,
-      status: backendRequest.status
+      status: backendRequest.status,
+      // Keep original backend data for DonationForm
+      _id: backendRequest._id,
+      clothes: backendRequest.clothes || {},
+      stationary: backendRequest.stationary || {},
+      foods: backendRequest.foods || {},
+      furniture: backendRequest.furniture || {},
+      electronics: backendRequest.electronics || {},
+      // Additional receiver info
+      receiverInfo: {
+        name: receiver?.name,
+        email: receiver?.email,
+        number: receiver?.number,
+        address: receiver?.address,
+        type: receiver?.type
+      }
     };
   };
 
@@ -250,7 +274,20 @@ function Donation() {
       });
 
       if (response.data && response.data.requests) {
-        const transformedRequests = response.data.requests.map(transformRequestData);
+        const transformedRequests = response.data.requests
+          .map(transformRequestData)
+          .filter(req => {
+            // Additional frontend filtering as safety measure
+            // Filter out requests with targetQuantity of 0 (no requirements)
+            if (req.targetQuantity === 0) {
+              return false;
+            }
+            // Filter out fulfilled requests (if any slip through)
+            if (req.status === 'fulfilled') {
+              return false;
+            }
+            return true;
+          });
         setRequests(transformedRequests);
       } else {
         setRequests([]);
