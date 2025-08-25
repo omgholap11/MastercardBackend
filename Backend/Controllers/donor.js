@@ -3,6 +3,9 @@ import { createTokenForDonor } from "../Services/authentication.js";
 
 export const handleDonorSignUp = async (req, res) => {
 
+    console.log("Donor signup request body: ", req.body);
+
+    
     if(!req.body.name || !req.body.email || !req.body.password || !req.body.number || !req.body.address || !req.body.type) {
         return res.status(400).json({ error: "All fields are required" });
     }
